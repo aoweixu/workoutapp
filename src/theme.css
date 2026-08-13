@@ -1,0 +1,268 @@
+@import "tailwindcss";
+
+/* Chalk on iron: blue-grey iron surfaces, chalk-white ink, copper accent.
+   Chart series colors (#d07248, #5294d6) are palette-validated vs #1d222b. */
+@theme {
+  --color-bg: #15181e;
+  --color-surface: #1d222b;
+  --color-raised: #262d38;
+  --color-line: #313947;
+  --color-ink: #ece9e2;
+  --color-dim: #a8adb8;
+  --color-faint: #7a8290;
+  --color-copper: #c65a33;
+  --color-copper-hi: #d07248;
+  --color-steel: #5294d6;
+  --color-gold: #e3a93c;
+  --color-good: #5cb876;
+  --color-bad: #e0584f;
+
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-dim);
+  }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: var(--color-raised);
+    color: var(--color-dim);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .chip-active {
+    border-color: var(--color-copper);
+    background: color-mix(in oklab, var(--color-copper) 18%, var(--color-surface));
+    color: var(--color-ink);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid var(--color-line);
+    background: var(--color-raised);
+    color: var(--color-ink);
+    user-select: none;
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+  .btn-primary {
+    background: var(--color-copper-hi);
+    border-color: var(--color-copper-hi);
+    color: #1c0f08;
+  }
+  .btn-danger {
+    background: transparent;
+    border-color: color-mix(in oklab, var(--color-bad) 45%, transparent);
+    color: var(--color-bad);
+  }
+  .btn-quiet {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-dim);
+  }
+
+  .input {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--color-line);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+  .input:focus {
+    outline: 2px solid var(--color-copper);
+    outline-offset: -1px;
+  }
+
+  /* ---- plates: the set buttons ---- */
+  .plate {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    user-select: none;
+    touch-action: manipulation;
+    transition: transform 90ms ease;
+  }
+  .plate:active {
+    transform: scale(0.9);
+  }
+  .plate-ghost {
+    border: 2px dashed color-mix(in oklab, var(--color-ink) 28%, transparent);
+    color: var(--color-dim);
+    background: transparent;
+  }
+  .plate-logged {
+    border: 2px solid color-mix(in oklab, var(--color-copper) 70%, #000 8%);
+    background: radial-gradient(
+      circle at 50% 42%,
+      var(--color-copper-hi) 0%,
+      var(--color-copper) 68%
+    );
+    box-shadow:
+      inset 0 0 0 4px color-mix(in oklab, #000 22%, transparent),
+      0 2px 6px color-mix(in oklab, #000 40%, transparent);
+    color: #fdf6ee;
+    animation: stamp 180ms ease-out;
+  }
+  .plate-add {
+    border: 2px dashed color-mix(in oklab, var(--color-ink) 16%, transparent);
+    color: var(--color-faint);
+    font-size: 22px;
+    font-weight: 500;
+  }
+  .plate-ring {
+    position: absolute;
+    inset: -6px;
+    pointer-events: none;
+  }
+
+  @keyframes stamp {
+    0% {
+      transform: scale(1.18);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* ---- bottom sheet ---- */
+  .sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in oklab, #000 55%, transparent);
+    z-index: 40;
+    animation: fadein 140ms ease-out;
+  }
+  .sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 41;
+    margin: 0 auto;
+    max-width: 520px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-bottom: none;
+    border-radius: 20px 20px 0 0;
+    padding: 8px 20px calc(20px + env(safe-area-inset-bottom));
+    animation: slideup 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .sheet-handle {
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-line);
+    margin: 4px auto 14px;
+  }
+
+  @keyframes slideup {
+    from {
+      transform: translateY(28px);
+      opacity: 0.5;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes fadein {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* ---- tab bar ---- */
+  .tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    justify-content: space-around;
+    background: color-mix(in oklab, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--color-line);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-faint);
+    padding: 4px 10px;
+    border-radius: 10px;
+    min-width: 56px;
+  }
+  .tab-active {
+    color: var(--color-copper-hi);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
