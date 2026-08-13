@@ -29,6 +29,8 @@ npm run icons      # regenerate PWA icons from scripts/make-icons.mjs
 
 The anon key is public by design; RLS is what protects the data. Auth sessions persist on-device, so sign-in is once per device.
 
+The deployed build has the project URL and anon key baked in from `.env` (gitignored) at build time, so a fresh device only needs sign-in. Values pasted in the Sync tab override the baked defaults.
+
 ## Sync design
 
 - Every row has a client UUID, `updated_at`, soft-delete flag, and a local `dirty` flag.
