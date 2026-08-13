@@ -17,7 +17,7 @@ import {
   type Settings,
 } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
-import { localDateStr, fmtDateLong } from "../lib/dates";
+import { localDateStr, fmtDateLong, weekdayShort } from "../lib/dates";
 import { tap } from "../lib/haptics";
 import { startRest, useRest } from "../state/timer";
 import { ExerciseCard } from "./ExerciseCard";
@@ -52,7 +52,6 @@ export function TodayView(props: { settings: Settings }) {
   const rotation = useLiveQuery(() => rotationTemplates(), []) ?? [];
 
   const data = useLiveQuery(async () => {
-    if (!selectedId) return null;
     const exMap = await exerciseMap();
     const build = async (t: Template): Promise<Block> => {
       const session = (await findSession(today, t.id)) ?? null;
@@ -72,7 +71,7 @@ export function TodayView(props: { settings: Settings }) {
       return { templateId: t.id, templateName: t.name, rows };
     };
     const rotationList = await rotationTemplates();
-    const main = rotationList.find((t) => t.id === selectedId);
+    const main = selectedId ? rotationList.find((t) => t.id === selectedId) : undefined;
     const blocks: { main: Block | null; everyday: Block[] } = {
       main: main ? await build(main) : null,
       everyday: [],
@@ -126,7 +125,8 @@ export function TodayView(props: { settings: Settings }) {
     </div>
   );
 
-  const mainName = data?.main?.templateName ?? "";
+  const restDay = data !== undefined && !data.main;
+  const mainName = data?.main?.templateName ?? (restDay ? "Rest day" : "");
 
   return (
     <div className="px-4 pt-5 pb-2">
@@ -142,9 +142,21 @@ export function TodayView(props: { settings: Settings }) {
             onClick={() => setSelectedId(t.id)}
           >
             {t.name}
+            {t.rotation_order !== null ? (
+              <span className="text-faint">{weekdayShort(t.rotation_order)}</span>
+            ) : null}
           </button>
         ))}
       </div>
+
+      {restDay ? (
+        <div className="card p-5 mb-3">
+          <div className="text-[15px] text-dim">
+            Nothing scheduled today. Missed a day? Tap it above to catch up,
+            it logs under today's date.
+          </div>
+        </div>
+      ) : null}
 
       {data?.main ? renderBlock(data.main) : null}
 

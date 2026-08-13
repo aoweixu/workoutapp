@@ -42,3 +42,18 @@ export function daysAgo(s: string): number {
   const ms = Date.now() - parseLocalDate(s).getTime();
   return Math.floor(ms / 86_400_000);
 }
+
+// ISO weekday: 1=Monday … 7=Sunday.
+export function isoWeekday(d: Date = new Date()): number {
+  return ((d.getDay() + 6) % 7) + 1;
+}
+
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+export function weekdayName(iso: number): string {
+  return WEEKDAYS[iso - 1] ?? "?";
+}
+
+export function weekdayShort(iso: number): string {
+  return WEEKDAYS[iso - 1]?.slice(0, 3) ?? "?";
+}

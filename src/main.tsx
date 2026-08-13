@@ -9,13 +9,14 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App";
-import { seedIfEmpty } from "./db/seed";
+import { migrateToWeekdaySchedule, seedIfEmpty } from "./db/seed";
 import { startSyncTriggers } from "./sync/engine";
 
 registerSW({ immediate: true });
 
 async function init() {
   await seedIfEmpty();
+  await migrateToWeekdaySchedule();
   startSyncTriggers();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>

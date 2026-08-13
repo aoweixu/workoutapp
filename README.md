@@ -4,7 +4,8 @@ Personal workout log. Offline-first PWA: sets are logged to IndexedDB on the pho
 
 ## How logging works
 
-- Today tab suggests the next day in the rotation. Each exercise shows one plate button per set, pre-filled with the last workout's reps (falls back to the sheet target).
+- Days are pinned to weekdays: Mon Push A, Tue Legs, Wed Pull A, Fri Push B, Sat Pull B; Thu and Sun are rest days (Everyday accessories always show). Missed a day? Tap its chip on any other day to catch up; it logs under today's date, and the schedule is editable per day in Plan.
+- Each exercise shows one plate button per set, pre-filled with the last workout's reps (falls back to the sheet target).
 - Tap a plate to log that set. Tap a logged plate to adjust or delete it. "+" logs an extra set.
 - Logging a set starts the rest timer (default 120s, per-exercise override in Plan). The gold ring drains around the plate you just racked.
 - Isometric holds count seconds instead of reps and have a stopwatch in the edit sheet.

@@ -13,7 +13,9 @@ import {
   templateItems,
   updateExercise,
   updateItem,
+  updateTemplateSchedule,
 } from "../db/repo";
+import { weekdayName } from "../lib/dates";
 import { scheduleSync } from "../sync/engine";
 import { closeTopOverlay, useOverlayBack } from "../state/ui";
 import { Sheet } from "./Sheet";
@@ -38,7 +40,7 @@ export function PlanView() {
             <div className="flex-1">
               <div className="text-[16px] font-semibold">{t.name}</div>
               <div className="text-[13px] text-dim mt-0.5">
-                {t.rotation_order !== null ? `Rotation day ${t.rotation_order}` : "Every day"}
+                {t.rotation_order !== null ? weekdayName(t.rotation_order) : "Every day"}
               </div>
             </div>
             <IconChevronRight size={18} className="text-faint" />
@@ -61,9 +63,10 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
     if (!template) return null;
     const items = await templateItems(template.id);
     const exMap = await exerciseMap();
-    const name = (await import("../db/db").then((m) => m.db.template.get(template.id)))?.name;
+    const current = await import("../db/db").then((m) => m.db.template.get(template.id));
     return {
-      name: name ?? template.name,
+      name: current?.name ?? template.name,
+      weekday: current?.rotation_order ?? null,
       rows: items.map((item) => ({ item, exercise: exMap.get(item.exercise_id) })),
     };
   }, [template?.id]);
@@ -80,6 +83,24 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
           <h1 className="display text-[34px] font-bold leading-[1.05]">{data?.name}</h1>
           <div className="text-[13px] text-dim">Tap name to rename</div>
         </button>
+        <label className="block mt-3 max-w-[240px]">
+          <div className="eyebrow mb-1">Scheduled on</div>
+          <select
+            className="input"
+            value={data?.weekday === null ? "null" : String(data?.weekday ?? "null")}
+            onChange={(e) => {
+              const v = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+              void updateTemplateSchedule(template.id, v).then(() => scheduleSync());
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+              <option key={d} value={d}>
+                {weekdayName(d)}
+              </option>
+            ))}
+            <option value="null">Every day (accessories)</option>
+          </select>
+        </label>
         <div className="space-y-2.5 mt-4">
           {(data?.rows ?? []).map(({ item, exercise }) => (
             <div key={item.id} className="card p-3.5 flex items-center gap-2">

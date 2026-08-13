@@ -11,7 +11,7 @@ import {
   type Template,
   type TemplateItem,
 } from "./db";
-import { localDateStr } from "../lib/dates";
+import { isoWeekday, localDateStr } from "../lib/dates";
 
 // ---------- settings ----------
 
@@ -69,20 +69,29 @@ export async function templateItems(templateId: string): Promise<TemplateItem[]>
   return items.sort((a, b) => a.sort - b.sort);
 }
 
-// Suggest today's workout: the rotation template after the most recent
-// rotation session. If a rotation session already exists today, stick to it.
+// Suggest today's workout by calendar: each day is pinned to a weekday
+// (Mon=Push A … Sat=Pull B). If a workout was already started today (e.g. a
+// catch-up on a rest day), stick with it. Returns null on a true rest day.
 export async function suggestTemplateId(): Promise<string | null> {
   const rotation = await rotationTemplates();
   if (rotation.length === 0) return null;
   const rotationIds = new Set(rotation.map((t) => t.id));
-  const sessions = (
-    await db.session.filter((s) => !s.deleted && rotationIds.has(s.template_id)).toArray()
-  ).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  if (sessions.length === 0) return rotation[0].id;
-  const latest = sessions[0];
-  if (latest.date === localDateStr()) return latest.template_id;
-  const idx = rotation.findIndex((t) => t.id === latest.template_id);
-  return rotation[(idx + 1) % rotation.length].id;
+  const today = localDateStr();
+  const startedToday = await db.session
+    .filter((s) => !s.deleted && s.date === today && rotationIds.has(s.template_id))
+    .first();
+  if (startedToday) return startedToday.template_id;
+  const wd = isoWeekday();
+  return rotation.find((t) => t.rotation_order === wd)?.id ?? null;
+}
+
+export async function updateTemplateSchedule(
+  id: string,
+  weekday: number | null,
+): Promise<void> {
+  const row = await db.template.get(id);
+  if (!row) return;
+  await db.template.put(touched(row, { rotation_order: weekday }));
 }
 
 // ---------- sessions & logging ----------

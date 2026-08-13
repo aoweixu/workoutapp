@@ -17,7 +17,8 @@ export interface Exercise extends Synced {
 
 export interface Template extends Synced {
   name: string;
-  // Position in the A/B rotation (1-based). null = out of rotation (Everyday).
+  // ISO weekday this day is scheduled on (1=Mon … 7=Sun).
+  // null = everyday accessories block. (Field name is historical.)
   rotation_order: number | null;
   sort: number;
 }
