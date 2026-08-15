@@ -46,6 +46,9 @@ export function startRest(args: {
       clearRest();
       timerDone(soundOn);
     } else {
+      // New reference each tick: useSyncExternalStore compares snapshots with
+      // Object.is, so a stable reference would suppress every re-render.
+      rest = { ...rest };
       emit();
     }
   }, 250);
@@ -65,6 +68,10 @@ export function clearRest(): void {
     ticker = null;
   }
   emit();
+}
+
+export function getRest(): RestState | null {
+  return rest;
 }
 
 export function useRest(): RestState | null {
