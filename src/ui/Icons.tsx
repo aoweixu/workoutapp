@@ -118,6 +118,16 @@ export function IconCloud(p: IconProps & { slash?: boolean }) {
   );
 }
 
+export function IconPopOut(p: IconProps) {
+  return (
+    <svg {...svgProps(p)}>
+      <path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4" />
+      <path d="M14 4h6v6" />
+      <path d="M20 4l-8 8" />
+    </svg>
+  );
+}
+
 export function IconCheck(p: IconProps) {
   return (
     <svg {...svgProps(p)}>
