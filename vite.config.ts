@@ -13,6 +13,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      // Custom sw.ts (skipWaiting/clientsClaim/fallback live there) so we can
+      // handle notificationclick for the rest-done notification.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
       manifest: {
         name: "Overload",
@@ -34,12 +39,8 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
-        navigateFallback: base + "index.html",
-        // Never intercept Supabase API calls.
-        navigateFallbackDenylist: [/supabase/],
-        runtimeCaching: [],
       },
     }),
   ],

@@ -19,6 +19,7 @@ import {
 import { scheduleSync } from "../sync/engine";
 import { localDateStr, fmtDateLong, weekdayShort } from "../lib/dates";
 import { tap } from "../lib/haptics";
+import { maybeAskNotificationPermission } from "../lib/notify";
 import { startRest, useRest } from "../state/timer";
 import { ExerciseCard } from "./ExerciseCard";
 import { EditSheet, PromptSheet } from "./EditSheet";
@@ -98,6 +99,7 @@ export function TodayView(props: { settings: Settings }) {
       progression: row.item.progression,
     });
     tap();
+    maybeAskNotificationPermission();
     startRest({
       exerciseId: row.exercise.id,
       exerciseName: row.exercise.name,

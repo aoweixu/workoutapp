@@ -19,12 +19,14 @@ export interface Settings {
   restDefault: number;
   sound: boolean;
   wakeLock: boolean;
+  notify: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   restDefault: 120,
   sound: true,
   wakeLock: true,
+  notify: true,
 };
 
 export async function getSettings(): Promise<Settings> {

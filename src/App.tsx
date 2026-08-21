@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { getSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from "./db/repo";
 import { getSyncStatus, subscribeSync } from "./sync/engine";
-import { setTimerSound } from "./state/timer";
+import { setTimerNotify, setTimerSound } from "./state/timer";
 import { useWakeLock } from "./hooks/useWakeLock";
 import { TodayView } from "./ui/TodayView";
 import { HistoryView } from "./ui/HistoryView";
@@ -37,6 +37,7 @@ export default function App() {
     void getSettings().then((s) => {
       setSettings(s);
       setTimerSound(s.sound);
+      setTimerNotify(s.notify);
     });
   }, []);
 
@@ -45,6 +46,7 @@ export default function App() {
       const next = { ...cur, ...patch };
       void saveSettings(next);
       setTimerSound(next.sound);
+      setTimerNotify(next.notify);
       return next;
     });
   };

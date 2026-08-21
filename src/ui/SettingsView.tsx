@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { db } from "../db/db";
 import { exportJson, importJson, type Settings } from "../db/repo";
+import { askNotificationPermission } from "../lib/notify";
 import { clearConfig, getClient, getConfig, saveConfig } from "../sync/client";
 import {
   getSyncStatus,
@@ -243,6 +244,25 @@ function PrefsCard(props: {
         checked={s.wakeLock}
         onChange={(v) => props.onSettings({ wakeLock: v })}
       />
+      <ToggleRow
+        label="Notify when rest ends"
+        checked={s.notify}
+        onChange={(v) => {
+          props.onSettings({ notify: v });
+          if (v) {
+            void askNotificationPermission().then((perm) => {
+              if (perm === "unsupported") {
+                showToast("Notifications aren't supported in this browser.");
+              } else if (perm === "denied") {
+                showToast("Blocked by the system. Allow notifications for this app in Android settings.");
+              }
+            });
+          }
+        }}
+      />
+      <div className="text-[12.5px] text-faint">
+        Fires when the app is in the background or popped out; a paired watch mirrors it.
+      </div>
     </div>
   );
 }

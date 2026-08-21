@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { timerDone } from "../lib/haptics";
+import { clearRestDoneNotification, notifyRestDone } from "../lib/notify";
 
 // Rest timer. Survives re-renders and tab switches; computes remaining from
 // wall clock so background throttling can't drift it.
@@ -15,6 +16,7 @@ export interface RestState {
 let rest: RestState | null = null;
 let ticker: ReturnType<typeof setInterval> | null = null;
 let soundOn = true;
+let notifyOn = true;
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -23,6 +25,10 @@ function emit(): void {
 
 export function setTimerSound(on: boolean): void {
   soundOn = on;
+}
+
+export function setTimerNotify(on: boolean): void {
+  notifyOn = on;
 }
 
 export function startRest(args: {
@@ -39,12 +45,15 @@ export function startRest(args: {
     endsAt: Date.now() + args.seconds * 1000,
     totalSeconds: args.seconds,
   };
+  clearRestDoneNotification();
   if (ticker) clearInterval(ticker);
   ticker = setInterval(() => {
     if (!rest) return;
     if (Date.now() >= rest.endsAt) {
+      const done = rest;
       clearRest();
       timerDone(soundOn);
+      if (notifyOn) notifyRestDone(done.exerciseName, done.setNo);
     } else {
       // New reference each tick: useSyncExternalStore compares snapshots with
       // Object.is, so a stable reference would suppress every re-render.
