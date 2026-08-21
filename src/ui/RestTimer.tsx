@@ -1,4 +1,4 @@
-import { clearRest, extendRest, restRemaining, useRest } from "../state/timer";
+import { dismissRest, extendRest, restRemaining, useRest } from "../state/timer";
 import { closeRestPip, openRestPip, pipSupported } from "../lib/pip";
 import { fmtDuration } from "../lib/targets";
 import { IconPopOut } from "./Icons";
@@ -35,7 +35,7 @@ export function RestTimerPill() {
           className="btn px-3 py-1.5 text-[13px]"
           onClick={() => {
             closeRestPip();
-            clearRest();
+            dismissRest();
           }}
         >
           Done

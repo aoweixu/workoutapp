@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { timerDone } from "../lib/haptics";
 import { clearRestDoneNotification, notifyRestDone } from "../lib/notify";
+import { cancelPush, schedulePush } from "../lib/push";
 
 // Rest timer. Survives re-renders and tab switches; computes remaining from
 // wall clock so background throttling can't drift it.
@@ -46,6 +47,7 @@ export function startRest(args: {
     totalSeconds: args.seconds,
   };
   clearRestDoneNotification();
+  if (notifyOn) schedulePush(rest);
   if (ticker) clearInterval(ticker);
   ticker = setInterval(() => {
     if (!rest) return;
@@ -53,7 +55,12 @@ export function startRest(args: {
       const done = rest;
       clearRest();
       timerDone(soundOn);
-      if (notifyOn) notifyRestDone(done.exerciseName, done.setNo);
+      if (notifyOn) {
+        notifyRestDone(done.exerciseName, done.setNo);
+        // User is watching the app: the scheduled push is redundant noise.
+        // The function waits a 2s grace before firing, so this cancel wins.
+        if (document.visibilityState === "visible") cancelPush();
+      }
     } else {
       // New reference each tick: useSyncExternalStore compares snapshots with
       // Object.is, so a stable reference would suppress every re-render.
@@ -67,7 +74,14 @@ export function startRest(args: {
 export function extendRest(seconds: number): void {
   if (!rest) return;
   rest = { ...rest, endsAt: rest.endsAt + seconds * 1000 };
+  if (notifyOn) schedulePush(rest); // reschedule; the old server wait sees a changed ends_at and stands down
   emit();
+}
+
+// User explicitly ended the rest (Done button): also revoke the pending push.
+export function dismissRest(): void {
+  cancelPush();
+  clearRest();
 }
 
 export function clearRest(): void {

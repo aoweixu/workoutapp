@@ -28,6 +28,26 @@ registerRoute(
   }),
 );
 
+// Server-scheduled rest push (see lib/push.ts + supabase/functions/rest-timer).
+// Same tag as the page-fired local notification, so if both arrive the card
+// is deduped instead of stacking.
+self.addEventListener("push", (event) => {
+  let data: { title?: string; body?: string } | null = null;
+  try {
+    data = event.data?.json() ?? null;
+  } catch {
+    // Not JSON — show the fallback text.
+  }
+  event.waitUntil(
+    self.registration.showNotification(data?.title ?? "Rest done — go", {
+      body: data?.body ?? "",
+      tag: "rest-done",
+      icon: `${import.meta.env.BASE_URL}icons/icon-192.png`,
+      badge: `${import.meta.env.BASE_URL}icons/icon-192.png`,
+    }),
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
