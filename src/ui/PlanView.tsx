@@ -160,8 +160,8 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
   );
 }
 
-// Bar options for pull-up style movements. Chips on the card mirror whichever
-// are enabled; the stored value is still the comma-separated variants string.
+// Bar options for pull-up style movements. One switch enables the pair; the
+// card then offers a one-at-a-time pick, stored in the variants string.
 const BAR_VARIANTS = ["Angled", "Straight"];
 
 export function ItemSheet(props: { item: TemplateItem | null; onClose: () => void; showRemove?: boolean }) {
@@ -221,28 +221,13 @@ export function ItemSheet(props: { item: TemplateItem | null; onClose: () => voi
           checked={(live?.track_weight ?? item.track_weight) === 1}
           onChange={(v) => patch({ track_weight: v ? 1 : 0 })}
         />
-        <div>
-          <div className="eyebrow mb-1">Bar (pull-ups, chin-ups)</div>
-          <div className="flex gap-2">
-            {BAR_VARIANTS.map((v) => {
-              const on = enabledVariants.includes(v);
-              return (
-                <button
-                  key={v}
-                  className={`chip ${on ? "chip-active" : ""}`}
-                  aria-pressed={on}
-                  onClick={() =>
-                    patch({
-                      variants: BAR_VARIANTS.filter((b) => (b === v ? !on : enabledVariants.includes(b))).join(", "),
-                    })
-                  }
-                >
-                  {v} bar
-                </button>
-              );
-            })}
-          </div>
-          <div className="text-[12.5px] text-faint mt-1">Both on = pick the bar on the card, saved with every set.</div>
+        <ToggleRow
+          label="Bar toggle (Angled / Straight)"
+          checked={enabledVariants.length > 0}
+          onChange={(v) => patch({ variants: v ? BAR_VARIANTS.join(", ") : "" })}
+        />
+        <div className="text-[12.5px] text-faint -mt-2">
+          Adds Angled / Straight chips to the card; the one you pick is saved with each set.
         </div>
         <label className="block">
           <div className="eyebrow mb-1">Form video URL</div>
