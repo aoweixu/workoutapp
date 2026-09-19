@@ -16,6 +16,7 @@ import {
   updateTemplateSchedule,
 } from "../db/repo";
 import { weekdayName } from "../lib/dates";
+import { parseVariants } from "../lib/history";
 import { scheduleSync } from "../sync/engine";
 import { closeTopOverlay, useOverlayBack } from "../state/ui";
 import { Sheet } from "./Sheet";
@@ -159,6 +160,10 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
   );
 }
 
+// Bar options for pull-up style movements. Chips on the card mirror whichever
+// are enabled; the stored value is still the comma-separated variants string.
+const BAR_VARIANTS = ["Angled", "Straight"];
+
 export function ItemSheet(props: { item: TemplateItem | null; onClose: () => void; showRemove?: boolean }) {
   const { item } = props;
   const exercise = useLiveQuery(
@@ -173,6 +178,7 @@ export function ItemSheet(props: { item: TemplateItem | null; onClose: () => voi
 
   const patch = (p: Parameters<typeof updateItem>[1]) =>
     void updateItem(item.id, p).then(() => scheduleSync());
+  const enabledVariants = parseVariants(live?.variants ?? item.variants);
 
   return (
     <Sheet open={!!item} onClose={props.onClose} title={exercise?.name ?? "Exercise"}>
@@ -215,15 +221,29 @@ export function ItemSheet(props: { item: TemplateItem | null; onClose: () => voi
           checked={(live?.track_weight ?? item.track_weight) === 1}
           onChange={(v) => patch({ track_weight: v ? 1 : 0 })}
         />
-        <label className="block">
-          <div className="eyebrow mb-1">Variants (comma separated)</div>
-          <input
-            className="input"
-            defaultValue={item.variants}
-            placeholder="e.g. Angled, Straight"
-            onBlur={(e) => patch({ variants: e.target.value.trim() })}
-          />
-        </label>
+        <div>
+          <div className="eyebrow mb-1">Bar (pull-ups, chin-ups)</div>
+          <div className="flex gap-2">
+            {BAR_VARIANTS.map((v) => {
+              const on = enabledVariants.includes(v);
+              return (
+                <button
+                  key={v}
+                  className={`chip ${on ? "chip-active" : ""}`}
+                  aria-pressed={on}
+                  onClick={() =>
+                    patch({
+                      variants: BAR_VARIANTS.filter((b) => (b === v ? !on : enabledVariants.includes(b))).join(", "),
+                    })
+                  }
+                >
+                  {v} bar
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-[12.5px] text-faint mt-1">Both on = pick the bar on the card, saved with every set.</div>
+        </div>
         <label className="block">
           <div className="eyebrow mb-1">Form video URL</div>
           <input
