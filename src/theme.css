@@ -157,6 +157,13 @@ body {
     color: #fdf6ee;
     animation: stamp 180ms ease-out;
   }
+  .plate-pr {
+    border-color: var(--color-gold);
+    box-shadow:
+      inset 0 0 0 4px color-mix(in oklab, #000 22%, transparent),
+      0 0 0 2px color-mix(in oklab, var(--color-gold) 45%, transparent),
+      0 2px 10px color-mix(in oklab, var(--color-gold) 40%, transparent);
+  }
   .plate-add {
     border: 2px dashed color-mix(in oklab, var(--color-ink) 16%, transparent);
     color: var(--color-faint);

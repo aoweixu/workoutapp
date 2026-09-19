@@ -10,7 +10,7 @@ import {
 } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
 import { fmtDate, fmtDateLong } from "../lib/dates";
-import { fmtValue } from "../lib/targets";
+import { fmtValue, fmtWeight } from "../lib/targets";
 import { closeTopOverlay, showToast, useOverlayBack } from "../state/ui";
 import { EditSheet, PromptSheet } from "./EditSheet";
 import { IconChevronRight, IconTrash } from "./Icons";
@@ -109,12 +109,19 @@ function SessionDetail(props: { session: Session | null; onClose: () => void }) 
                   >
                     <span className="text-faint">S{l.set_no}</span>
                     <span className="text-ink font-semibold">{fmtValue(l.value, l.rep_type)}</span>
+                    {l.weight ? <span className="text-gold">{fmtWeight(l.weight)}</span> : null}
                   </button>
                 ))}
               </div>
-              {g.logs[0]?.progression ? (
-                <div className="text-[13px] text-dim mt-2">{g.logs[0].progression}</div>
-              ) : null}
+              {(() => {
+                const meta = [
+                  g.logs[0]?.progression,
+                  [...new Set(g.logs.map((l) => l.variant).filter(Boolean))].join(" / "),
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                return meta ? <div className="text-[13px] text-dim mt-2">{meta}</div> : null;
+              })()}
             </div>
           ))}
         </div>

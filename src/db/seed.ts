@@ -123,6 +123,8 @@ export async function seedIfEmpty(): Promise<void> {
             progression: item.prog,
             rep_type: item.repType ?? "reps",
             rest_seconds: null,
+            track_weight: 0,
+            variants: "",
             sort: sort++,
           });
           await db.template_item.add(row);

@@ -1,16 +1,18 @@
 // The signature control: one weight plate per set. Dashed chalk outline =
-// not done (shows what to beat), solid copper plate = logged. A gold ring
-// drains around the plate you just racked while you rest.
+// not done (shows what to beat), solid copper plate = logged, gold rim = a
+// logged set that beat the previous best for that slot. A gold ring drains
+// around the plate you just racked while you rest.
 export function PlateButton(props: {
   label: string;
   state: "ghost" | "logged" | "add";
+  pr?: boolean;
   restFraction?: number | null;
   onClick: () => void;
   ariaLabel: string;
 }) {
   const cls =
     props.state === "logged"
-      ? "plate plate-logged"
+      ? `plate plate-logged${props.pr ? " plate-pr" : ""}`
       : props.state === "add"
         ? "plate plate-add"
         : "plate plate-ghost";

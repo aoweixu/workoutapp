@@ -18,6 +18,11 @@ export function fmtValue(value: number, repType: "reps" | "seconds"): string {
   return repType === "seconds" ? `${value}s` : String(value);
 }
 
+export function fmtWeight(lb: number): string {
+  if (!lb) return "BW";
+  return `+${Number.isInteger(lb) ? lb : lb.toFixed(1)} lb`;
+}
+
 export function fmtDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;

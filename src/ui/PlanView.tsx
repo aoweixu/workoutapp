@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import type { Template, TemplateItem } from "../db/db";
+import { db, type Template, type TemplateItem } from "../db/db";
 import {
   addItem,
   createExercise,
@@ -20,6 +20,7 @@ import { scheduleSync } from "../sync/engine";
 import { closeTopOverlay, useOverlayBack } from "../state/ui";
 import { Sheet } from "./Sheet";
 import { PromptSheet } from "./EditSheet";
+import { ToggleRow } from "./ToggleRow";
 import { IconArrowDown, IconArrowUp, IconChevronRight, IconTrash } from "./Icons";
 
 export function PlanView() {
@@ -112,6 +113,8 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
                   {item.target_sets} × {item.target_reps || "?"}
                   {item.rep_type === "seconds" ? "s" : ""}
                   {item.progression ? ` · ${item.progression}` : ""}
+                  {item.track_weight ? " · weighted" : ""}
+                  {item.variants ? ` · ${item.variants}` : ""}
                   {item.rest_seconds ? ` · rest ${item.rest_seconds}s` : ""}
                 </div>
               </button>
@@ -163,6 +166,9 @@ function ItemSheet(props: { item: TemplateItem | null; onClose: () => void }) {
       item ? (await exerciseMap()).get(item.exercise_id) : undefined,
     [item?.id],
   );
+  // The toggle is controlled, so it needs the live row rather than the
+  // snapshot the sheet was opened with.
+  const live = useLiveQuery(() => (item ? db.template_item.get(item.id) : undefined), [item?.id]);
   if (!item) return null;
 
   const patch = (p: Parameters<typeof updateItem>[1]) =>
@@ -202,6 +208,20 @@ function ItemSheet(props: { item: TemplateItem | null; onClose: () => void }) {
             defaultValue={item.progression}
             placeholder="e.g. 4 steps declined ring"
             onBlur={(e) => patch({ progression: e.target.value.trim() })}
+          />
+        </label>
+        <ToggleRow
+          label="Added weight (weighted bodyweight)"
+          checked={(live?.track_weight ?? item.track_weight) === 1}
+          onChange={(v) => patch({ track_weight: v ? 1 : 0 })}
+        />
+        <label className="block">
+          <div className="eyebrow mb-1">Variants (comma separated)</div>
+          <input
+            className="input"
+            defaultValue={item.variants}
+            placeholder="e.g. Angled, Straight"
+            onBlur={(e) => patch({ variants: e.target.value.trim() })}
           />
         </label>
         <label className="block">

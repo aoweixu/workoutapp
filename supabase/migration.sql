@@ -41,6 +41,8 @@ create table public.template_item (
   progression text not null default '',
   rep_type text not null default 'reps' check (rep_type in ('reps', 'seconds')),
   rest_seconds int,
+  track_weight smallint not null default 0,
+  variants text not null default '',
   sort int not null default 0,
   updated_at timestamptz not null default now(),
   deleted smallint not null default 0
@@ -65,6 +67,8 @@ create table public.set_log (
   value int not null,
   rep_type text not null default 'reps' check (rep_type in ('reps', 'seconds')),
   progression text not null default '',
+  weight real not null default 0,
+  variant text not null default '',
   logged_at timestamptz not null,
   updated_at timestamptz not null default now(),
   deleted smallint not null default 0

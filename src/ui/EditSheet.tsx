@@ -1,27 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 import type { SetLog } from "../db/db";
-import { removeSetLog, updateSetValue } from "../db/repo";
+import { removeSetLog, updateSetLog } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
-import { fmtValue } from "../lib/targets";
+import { fmtValue, fmtWeight } from "../lib/targets";
 import { closeTopOverlay } from "../state/ui";
 import { Sheet } from "./Sheet";
 import { IconTrash } from "./Icons";
 
 // Adjust or delete a logged set. For timed holds there's a stopwatch: run it
-// while you hold, stop it, the elapsed seconds become the value.
+// while you hold, stop it, the elapsed seconds become the value. Weight and
+// variant rows appear when the exercise tracks them (or the set carries one).
 export function EditSheet(props: {
   log: SetLog | null;
   exerciseName: string;
+  trackWeight?: boolean;
+  variants?: string[];
   onClose: () => void;
 }) {
   const { log } = props;
   const [value, setValue] = useState(0);
+  const [weight, setWeight] = useState(0);
+  const [variant, setVariant] = useState("");
   const [running, setRunning] = useState(false);
   const startedAt = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (log) setValue(log.value);
+    if (log) {
+      setValue(log.value);
+      setWeight(log.weight ?? 0);
+      setVariant(log.variant ?? "");
+    }
     setRunning(false);
     if (timerRef.current) clearInterval(timerRef.current);
   }, [log]);
@@ -33,6 +42,9 @@ export function EditSheet(props: {
   }, []);
 
   if (!log) return null;
+
+  const showWeight = props.trackWeight ?? log.weight > 0;
+  const variantList = props.variants ?? (log.variant ? [log.variant] : []);
 
   const step = (d: number) => setValue((v) => Math.max(0, v + d));
 
@@ -50,7 +62,7 @@ export function EditSheet(props: {
   };
 
   const save = async () => {
-    await updateSetValue(log.id, value);
+    await updateSetLog(log.id, { value, weight, variant });
     scheduleSync();
     closeTopOverlay();
   };
@@ -74,6 +86,40 @@ export function EditSheet(props: {
           +
         </button>
       </div>
+      {showWeight ? (
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <span className="text-[15px] text-dim">Added weight</span>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn px-3 py-1.5"
+              onClick={() => setWeight((w) => Math.max(0, w - 2.5))}
+              aria-label="Minus 2.5 lb"
+            >
+              −
+            </button>
+            <span className="display text-[20px] font-bold text-gold min-w-[80px] text-center tabular-nums">
+              {fmtWeight(weight)}
+            </span>
+            <button className="btn px-3 py-1.5" onClick={() => setWeight((w) => w + 2.5)} aria-label="Plus 2.5 lb">
+              +
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {variantList.length > 0 ? (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {variantList.map((v) => (
+            <button
+              key={v}
+              className={`chip ${v === variant ? "chip-active" : ""}`}
+              onClick={() => setVariant(v)}
+              aria-pressed={v === variant}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {log.rep_type === "seconds" ? (
         <button className={`btn w-full mb-3 ${running ? "btn-danger" : ""}`} onClick={toggleStopwatch}>
           {running ? "Stop hold" : "Time the hold"}

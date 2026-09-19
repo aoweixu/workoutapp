@@ -4,31 +4,33 @@ import type { Exercise, SetLog, Template, TemplateItem } from "../db/db";
 import {
   ensureSession,
   everydayTemplates,
+  exerciseHistory,
   exerciseMap,
   findSession,
-  lastPerformance,
   logSet,
   rotationTemplates,
   sessionLogs,
   suggestTemplateId,
   templateItems,
   updateItem,
-  type Ghost,
   type Settings,
 } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
 import { localDateStr, fmtDateLong, weekdayShort } from "../lib/dates";
 import { tap } from "../lib/haptics";
+import { parseVariants, type Combo, type HistoryEntry } from "../lib/history";
 import { maybeAskNotificationPermission } from "../lib/notify";
+import { setSelection, useSelections } from "../state/selection";
 import { startRest, useRest } from "../state/timer";
 import { ExerciseCard } from "./ExerciseCard";
 import { EditSheet, PromptSheet } from "./EditSheet";
+import { WeightSheet } from "./WeightSheet";
 
 interface Row {
   item: TemplateItem;
   exercise: Exercise;
   logs: SetLog[];
-  ghost: Ghost | null;
+  history: HistoryEntry[];
 }
 
 interface Block {
@@ -39,9 +41,11 @@ interface Block {
 
 export function TodayView(props: { settings: Settings }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editingLog, setEditingLog] = useState<{ log: SetLog; name: string } | null>(null);
+  const [editingLog, setEditingLog] = useState<{ log: SetLog; item: TemplateItem; name: string } | null>(null);
   const [editingProg, setEditingProg] = useState<TemplateItem | null>(null);
+  const [pickingWeight, setPickingWeight] = useState<{ exerciseId: string; name: string; value: number } | null>(null);
   const rest = useRest();
+  const selections = useSelections();
   const today = localDateStr();
 
   useEffect(() => {
@@ -66,7 +70,7 @@ export function TodayView(props: { settings: Settings }) {
           item,
           exercise,
           logs: logs.filter((l) => l.exercise_id === item.exercise_id),
-          ghost: await lastPerformance(item.exercise_id, session?.id ?? null),
+          history: await exerciseHistory(item.exercise_id, session?.id ?? null),
         });
       }
       return { templateId: t.id, templateName: t.name, rows };
@@ -88,6 +92,7 @@ export function TodayView(props: { settings: Settings }) {
     row: Row,
     setNo: number,
     value: number,
+    combo: Combo,
   ) => {
     const session = await ensureSession(today, block.templateId);
     await logSet({
@@ -97,6 +102,8 @@ export function TodayView(props: { settings: Settings }) {
       value,
       repType: row.item.rep_type,
       progression: row.item.progression,
+      weight: combo.weight,
+      variant: combo.variant,
     });
     tap();
     maybeAskNotificationPermission();
@@ -117,11 +124,16 @@ export function TodayView(props: { settings: Settings }) {
           item={row.item}
           exercise={row.exercise}
           logs={row.logs}
-          ghost={row.ghost}
+          history={row.history}
+          selection={selections.get(row.exercise.id)}
           rest={rest}
-          onLog={(setNo, value) => void handleLog(block, row, setNo, value)}
-          onOpenLog={(log) => setEditingLog({ log, name: row.exercise.name })}
+          onLog={(setNo, value, combo) => void handleLog(block, row, setNo, value, combo)}
+          onOpenLog={(log) => setEditingLog({ log, item: row.item, name: row.exercise.name })}
           onEditProgression={() => setEditingProg(row.item)}
+          onSelect={(patch) => setSelection(row.exercise.id, patch)}
+          onPickWeight={(current) =>
+            setPickingWeight({ exerciseId: row.exercise.id, name: row.exercise.name, value: current })
+          }
         />
       ))}
     </div>
@@ -134,7 +146,7 @@ export function TodayView(props: { settings: Settings }) {
     <div className="px-4 pt-5 pb-2">
       <div className="eyebrow">{fmtDateLong(today)}</div>
       <h1 className="display text-[40px] font-bold leading-[1.05] mt-0.5 mb-3">
-        {mainName || " "}
+        {mainName || " "}
       </h1>
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 mb-4 [scrollbar-width:none]">
         {rotation.map((t) => (
@@ -172,7 +184,18 @@ export function TodayView(props: { settings: Settings }) {
       <EditSheet
         log={editingLog?.log ?? null}
         exerciseName={editingLog?.name ?? ""}
+        trackWeight={editingLog ? editingLog.item.track_weight === 1 : undefined}
+        variants={editingLog ? parseVariants(editingLog.item.variants) : undefined}
         onClose={() => setEditingLog(null)}
+      />
+      <WeightSheet
+        open={!!pickingWeight}
+        title={`${pickingWeight?.name ?? ""} · added weight`}
+        value={pickingWeight?.value ?? 0}
+        onSave={(lb) => {
+          if (pickingWeight) setSelection(pickingWeight.exerciseId, { weight: lb });
+        }}
+        onClose={() => setPickingWeight(null)}
       />
       <PromptSheet
         open={!!editingProg}

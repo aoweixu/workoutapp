@@ -12,6 +12,7 @@ import {
   type TemplateItem,
 } from "./db";
 import { isoWeekday, localDateStr } from "../lib/dates";
+import type { HistoryEntry } from "../lib/history";
 
 // ---------- settings ----------
 
@@ -137,6 +138,8 @@ export async function logSet(args: {
   value: number;
   repType: "reps" | "seconds";
   progression: string;
+  weight: number;
+  variant: string;
 }): Promise<SetLog> {
   const row = fresh({
     session_id: args.sessionId,
@@ -145,16 +148,21 @@ export async function logSet(args: {
     value: args.value,
     rep_type: args.repType,
     progression: args.progression,
+    weight: args.weight,
+    variant: args.variant,
     logged_at: nowIso(),
   });
   await db.set_log.add(row);
   return row;
 }
 
-export async function updateSetValue(id: string, value: number): Promise<void> {
+export async function updateSetLog(
+  id: string,
+  patch: Partial<Pick<SetLog, "value" | "weight" | "variant">>,
+): Promise<void> {
   const row = await db.set_log.get(id);
   if (!row) return;
-  await db.set_log.put(touched(row, { value }));
+  await db.set_log.put(touched(row, patch));
 }
 
 export async function removeSetLog(id: string): Promise<void> {
@@ -180,36 +188,36 @@ export async function saveSessionNotes(id: string, notes: string): Promise<void>
   await db.session.put(touched(row, { notes }));
 }
 
-// Last performance of an exercise before the given session: values by set_no,
-// plus the date it happened. This is what pre-fills the plates.
-export interface Ghost {
-  date: string;
-  progression: string;
-  values: Map<number, number>;
-}
-
-export async function lastPerformance(
+// Every past set of an exercise outside the given session, newest first.
+// Cards derive prefill (last session at the current combo) and per-slot
+// bests from this; see lib/history.ts.
+export async function exerciseHistory(
   exerciseId: string,
   excludeSessionId: string | null,
-): Promise<Ghost | null> {
+): Promise<HistoryEntry[]> {
   const logs = await db.set_log
     .where("exercise_id")
     .equals(exerciseId)
     .filter((l) => !l.deleted && l.session_id !== excludeSessionId)
     .toArray();
-  if (logs.length === 0) return null;
-  logs.sort((a, b) => (a.logged_at < b.logged_at ? 1 : -1));
-  const lastSessionId = logs[0].session_id;
-  const session = await db.session.get(lastSessionId);
-  const values = new Map<number, number>();
-  for (const l of logs.filter((x) => x.session_id === lastSessionId)) {
-    values.set(l.set_no, l.value);
+  if (logs.length === 0) return [];
+  const sessions = new Map((await db.session.toArray()).map((s) => [s.id, s]));
+  const out: HistoryEntry[] = [];
+  for (const l of logs) {
+    const s = sessions.get(l.session_id);
+    if (!s || s.deleted) continue;
+    out.push({
+      sessionId: l.session_id,
+      date: s.date,
+      loggedAt: l.logged_at,
+      setNo: l.set_no,
+      value: l.value,
+      weight: l.weight ?? 0,
+      variant: l.variant ?? "",
+    });
   }
-  return {
-    date: session?.date ?? "",
-    progression: logs[0].progression,
-    values,
-  };
+  out.sort((a, b) => (a.loggedAt < b.loggedAt ? 1 : -1));
+  return out;
 }
 
 // ---------- history ----------
@@ -273,7 +281,14 @@ export async function updateItem(
   patch: Partial<
     Pick<
       TemplateItem,
-      "target_sets" | "target_reps" | "progression" | "rep_type" | "rest_seconds" | "sort"
+      | "target_sets"
+      | "target_reps"
+      | "progression"
+      | "rep_type"
+      | "rest_seconds"
+      | "track_weight"
+      | "variants"
+      | "sort"
     >
   >,
 ): Promise<void> {
@@ -295,6 +310,8 @@ export async function addItem(
     progression: "",
     rep_type: "reps" as const,
     rest_seconds: null,
+    track_weight: 0 as const,
+    variants: "",
     sort: items.length === 0 ? 0 : Math.max(...items.map((i) => i.sort)) + 1,
   });
   await db.template_item.add(row);

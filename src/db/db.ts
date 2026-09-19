@@ -33,6 +33,10 @@ export interface TemplateItem extends Synced {
   progression: string;
   rep_type: "reps" | "seconds";
   rest_seconds: number | null;
+  // Structured load for bodyweight movements: 1 shows the added-weight chip.
+  track_weight: 0 | 1;
+  // Comma-separated variant names ("Angled, Straight"); non-empty shows a toggle.
+  variants: string;
   sort: number;
 }
 
@@ -49,6 +53,8 @@ export interface SetLog extends Synced {
   value: number; // reps or seconds, per rep_type
   rep_type: "reps" | "seconds";
   progression: string; // snapshot at log time
+  weight: number; // added weight in lb, 0 = bodyweight
+  variant: string; // "" when the exercise has no variants
   logged_at: string; // ISO
 }
 
@@ -66,14 +72,36 @@ export const db = new Dexie("overload") as Dexie & {
   meta: EntityTable<Meta, "key">;
 };
 
-db.version(1).stores({
+const STORES = {
   exercise: "id, name, dirty",
   template: "id, rotation_order, dirty",
   template_item: "id, template_id, exercise_id, dirty",
   session: "id, date, template_id, [date+template_id], dirty",
   set_log: "id, session_id, exercise_id, logged_at, [exercise_id+logged_at], dirty",
   meta: "key",
-});
+};
+
+db.version(1).stores(STORES);
+// v2: weight/variant columns. Backfill defaults without dirtying rows; the
+// server columns default identically so nothing needs pushing.
+db.version(2)
+  .stores(STORES)
+  .upgrade(async (tx) => {
+    await tx
+      .table("template_item")
+      .toCollection()
+      .modify((i: Partial<TemplateItem>) => {
+        i.track_weight ??= 0;
+        i.variants ??= "";
+      });
+    await tx
+      .table("set_log")
+      .toCollection()
+      .modify((l: Partial<SetLog>) => {
+        l.weight ??= 0;
+        l.variant ??= "";
+      });
+  });
 
 export const SYNCED_TABLES = [
   "exercise",

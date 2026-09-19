@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { fmtWeight } from "../lib/targets";
 
 export interface SeriesPoint {
   date: string;
@@ -40,11 +41,16 @@ export async function exerciseStats(exerciseId: string): Promise<ExerciseStats> 
     if (!session || session.deleted) continue;
     sessionLogs.sort((a, b) => a.set_no - b.set_no);
     repType = sessionLogs[0].rep_type;
+    const last = sessionLogs[sessionLogs.length - 1];
     points.push({
       date: session.date,
       best: Math.max(...sessionLogs.map((l) => l.value)),
       total: sessionLogs.reduce((s, l) => s + l.value, 0),
-      progression: sessionLogs[sessionLogs.length - 1].progression,
+      // Weight/variant fold into the label so a change marks the chart the
+      // same way a progression edit does.
+      progression: [last.progression, last.weight ? fmtWeight(last.weight) : "", last.variant]
+        .filter(Boolean)
+        .join(" · "),
       progressionChanged: false,
     });
   }
