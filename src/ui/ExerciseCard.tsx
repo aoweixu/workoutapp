@@ -195,7 +195,7 @@ export function ExerciseCard(props: {
         aria-label="Edit progression"
       >
         <span className="truncate">
-          {item.progression || "set progression"}
+          {item.progression || "progression · weight · variants"}
         </span>
       </button>
     </div>

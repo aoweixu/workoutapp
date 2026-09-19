@@ -159,7 +159,7 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
   );
 }
 
-function ItemSheet(props: { item: TemplateItem | null; onClose: () => void }) {
+export function ItemSheet(props: { item: TemplateItem | null; onClose: () => void; showRemove?: boolean }) {
   const { item } = props;
   const exercise = useLiveQuery(
     async () =>
@@ -261,15 +261,17 @@ function ItemSheet(props: { item: TemplateItem | null; onClose: () => void }) {
             />
           </label>
         </div>
-        <button
-          className="btn btn-danger w-full"
-          onClick={() => {
-            void removeItem(item.id).then(() => scheduleSync());
-            closeTopOverlay();
-          }}
-        >
-          <IconTrash size={18} /> Remove from this day
-        </button>
+        {props.showRemove !== false ? (
+          <button
+            className="btn btn-danger w-full"
+            onClick={() => {
+              void removeItem(item.id).then(() => scheduleSync());
+              closeTopOverlay();
+            }}
+          >
+            <IconTrash size={18} /> Remove from this day
+          </button>
+        ) : null}
       </div>
     </Sheet>
   );

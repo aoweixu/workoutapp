@@ -12,7 +12,6 @@ import {
   sessionLogs,
   suggestTemplateId,
   templateItems,
-  updateItem,
   type Settings,
 } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
@@ -23,7 +22,8 @@ import { maybeAskNotificationPermission } from "../lib/notify";
 import { setSelection, useSelections } from "../state/selection";
 import { startRest, useRest } from "../state/timer";
 import { ExerciseCard } from "./ExerciseCard";
-import { EditSheet, PromptSheet } from "./EditSheet";
+import { EditSheet } from "./EditSheet";
+import { ItemSheet } from "./PlanView";
 import { WeightSheet } from "./WeightSheet";
 
 interface Row {
@@ -197,18 +197,7 @@ export function TodayView(props: { settings: Settings }) {
         }}
         onClose={() => setPickingWeight(null)}
       />
-      <PromptSheet
-        open={!!editingProg}
-        title="Progression"
-        value={editingProg?.progression ?? ""}
-        placeholder="e.g. 4 steps declined ring, 100lb"
-        onSave={(v) => {
-          if (editingProg) {
-            void updateItem(editingProg.id, { progression: v }).then(() => scheduleSync());
-          }
-        }}
-        onClose={() => setEditingProg(null)}
-      />
+      <ItemSheet item={editingProg} onClose={() => setEditingProg(null)} showRemove={false} />
     </div>
   );
 }
