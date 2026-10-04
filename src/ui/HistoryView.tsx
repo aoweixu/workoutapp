@@ -10,7 +10,8 @@ import {
 } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
 import { fmtDate, fmtDateLong } from "../lib/dates";
-import { fmtValue, fmtWeight } from "../lib/targets";
+import { fmtLoad, type Implement } from "../lib/load";
+import { fmtValue } from "../lib/targets";
 import { closeTopOverlay, showToast, useOverlayBack } from "../state/ui";
 import { EditSheet, PromptSheet } from "./EditSheet";
 import { IconChevronRight, IconTrash } from "./Icons";
@@ -57,7 +58,7 @@ export function HistoryView() {
 
 function SessionDetail(props: { session: Session | null; onClose: () => void }) {
   const { session } = props;
-  const [editingLog, setEditingLog] = useState<{ log: SetLog; name: string } | null>(null);
+  const [editingLog, setEditingLog] = useState<{ log: SetLog; name: string; implement: Implement } | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   useOverlayBack(!!session, props.onClose);
 
@@ -65,10 +66,11 @@ function SessionDetail(props: { session: Session | null; onClose: () => void }) 
     if (!session) return null;
     const logs = await sessionLogs(session.id);
     const exMap = await exerciseMap();
-    const groups = new Map<string, { name: string; logs: SetLog[] }>();
+    const groups = new Map<string, { name: string; implement: Implement; logs: SetLog[] }>();
     for (const l of logs) {
       const g = groups.get(l.exercise_id) ?? {
         name: exMap.get(l.exercise_id)?.name ?? "?",
+        implement: exMap.get(l.exercise_id)?.implement ?? "bodyweight",
         logs: [],
       };
       g.logs.push(l);
@@ -105,21 +107,18 @@ function SessionDetail(props: { session: Session | null; onClose: () => void }) 
                   <button
                     key={l.id}
                     className="chip"
-                    onClick={() => setEditingLog({ log: l, name: g.name })}
+                    onClick={() => setEditingLog({ log: l, name: g.name, implement: g.implement })}
                   >
                     <span className="text-faint">S{l.set_no}</span>
                     <span className="text-ink font-semibold">{fmtValue(l.value, l.rep_type)}</span>
-                    {l.weight ? <span className="text-gold">{fmtWeight(l.weight)}</span> : null}
+                    {g.implement !== "bodyweight" || l.weight ? (
+                      <span className="text-gold">{fmtLoad(l.weight, g.implement)}</span>
+                    ) : null}
                   </button>
                 ))}
               </div>
               {(() => {
-                const meta = [
-                  g.logs[0]?.progression,
-                  [...new Set(g.logs.map((l) => l.variant).filter(Boolean))].join(" / "),
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
+                const meta = [...new Set(g.logs.map((l) => l.variant).filter(Boolean))].join(" / ");
                 return meta ? <div className="text-[13px] text-dim mt-2">{meta}</div> : null;
               })()}
             </div>
@@ -141,6 +140,7 @@ function SessionDetail(props: { session: Session | null; onClose: () => void }) 
       <EditSheet
         log={editingLog?.log ?? null}
         exerciseName={editingLog?.name ?? ""}
+        implement={editingLog?.implement}
         onClose={() => setEditingLog(null)}
       />
       <PromptSheet

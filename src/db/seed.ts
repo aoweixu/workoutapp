@@ -1,4 +1,5 @@
 import { db, fresh, getMeta, setMeta, touched, type TemplateItem } from "./db";
+import { DEFAULT_BAR_LB, type Implement } from "../lib/load";
 
 // Transcribed from the original Google Sheet routine (2026-08-12). Progression
 // stays free text exactly as written; "49s" holds become rep_type "seconds".
@@ -13,6 +14,26 @@ type SeedItem = {
 };
 
 type SeedTemplate = { name: string; rotation: number | null; items: SeedItem[] };
+
+const IMPLEMENT_BY_NAME: Record<string, Implement> = {
+  "Incline Bench 30°": "dumbbell",
+  "Incline 45 Biceps Curl": "dumbbell",
+  "Calf Raise": "dumbbell",
+  "Chest Support Row": "dumbbell",
+  "Isometric Dumbbell Hold": "dumbbell",
+  Squat: "barbell",
+  Deadlift: "barbell",
+  "Overhead Press": "barbell",
+  "Barbell Row": "barbell",
+  Curl: "fixedbar",
+  "Wrist Curl": "fixedbar",
+  "Tricep Extension": "cable",
+  "Lateral Raise": "cable",
+  "Single Arm Lat Pulldown": "cable",
+  "Face Pull": "cable",
+  "Ab Crunch": "machine",
+  "Back Extension": "plate",
+};
 
 const PLAN: SeedTemplate[] = [
   {
@@ -100,6 +121,8 @@ export async function seedIfEmpty(): Promise<void> {
             name: item.ex,
             video_url: item.video ?? "",
             notes: "",
+            implement: IMPLEMENT_BY_NAME[item.ex] ?? ("bodyweight" as const),
+            bar_lb: DEFAULT_BAR_LB,
           });
           await db.exercise.add(row);
           exerciseIds.set(item.ex, row.id);

@@ -17,11 +17,13 @@ import {
 } from "../db/repo";
 import { weekdayName } from "../lib/dates";
 import { parseVariants } from "../lib/history";
+import { BAR_OPTIONS, IMPLEMENTS, IMPLEMENT_ORDER, type Implement } from "../lib/load";
 import { scheduleSync } from "../sync/engine";
 import { closeTopOverlay, useOverlayBack } from "../state/ui";
 import { Sheet } from "./Sheet";
 import { PromptSheet } from "./EditSheet";
 import { ToggleRow } from "./ToggleRow";
+import { ImplementIcon } from "./ImplementIcon";
 import { IconArrowDown, IconArrowUp, IconChevronRight, IconTrash } from "./Icons";
 
 export function PlanView() {
@@ -65,7 +67,7 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
     if (!template) return null;
     const items = await templateItems(template.id);
     const exMap = await exerciseMap();
-    const current = await import("../db/db").then((m) => m.db.template.get(template.id));
+    const current = await db.template.get(template.id);
     return {
       name: current?.name ?? template.name,
       weekday: current?.rotation_order ?? null,
@@ -104,37 +106,42 @@ function TemplateEditor(props: { template: Template | null; onClose: () => void 
           </select>
         </label>
         <div className="space-y-2.5 mt-4">
-          {(data?.rows ?? []).map(({ item, exercise }) => (
-            <div key={item.id} className="card p-3.5 flex items-center gap-2">
-              <button className="flex-1 min-w-0 text-left" onClick={() => setEditingItem(item)}>
-                <div className="text-[15px] font-semibold truncate">
-                  {exercise?.name ?? "?"}
-                </div>
-                <div className="text-[13px] text-dim">
-                  {item.target_sets} × {item.target_reps || "?"}
-                  {item.rep_type === "seconds" ? "s" : ""}
-                  {item.progression ? ` · ${item.progression}` : ""}
-                  {item.track_weight ? " · weighted" : ""}
-                  {item.variants ? ` · ${item.variants}` : ""}
-                  {item.rest_seconds ? ` · rest ${item.rest_seconds}s` : ""}
-                </div>
-              </button>
-              <button
-                className="btn btn-quiet p-2"
-                onClick={() => void moveItem(item.id, -1).then(() => scheduleSync())}
-                aria-label="Move up"
-              >
-                <IconArrowUp size={17} />
-              </button>
-              <button
-                className="btn btn-quiet p-2"
-                onClick={() => void moveItem(item.id, 1).then(() => scheduleSync())}
-                aria-label="Move down"
-              >
-                <IconArrowDown size={17} />
-              </button>
-            </div>
-          ))}
+          {(data?.rows ?? []).map(({ item, exercise }) => {
+            const implement = exercise?.implement ?? "bodyweight";
+            return (
+              <div key={item.id} className="card p-3.5 flex items-center gap-2">
+                <button className="flex-1 min-w-0 text-left" onClick={() => setEditingItem(item)}>
+                  <div className="text-[15px] font-semibold truncate">{exercise?.name ?? "?"}</div>
+                  <div className="text-[13px] text-dim flex items-center gap-1.5 flex-wrap">
+                    <span>
+                      {item.target_sets} × {item.target_reps || "?"}
+                      {item.rep_type === "seconds" ? "s" : ""}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      · <ImplementIcon implement={implement} size={13} /> {IMPLEMENTS[implement].label}
+                      {implement === "bodyweight" && item.track_weight ? " + weight" : ""}
+                    </span>
+                    {item.variants ? <span>· {item.variants}</span> : null}
+                    {item.rest_seconds ? <span>· rest {item.rest_seconds}s</span> : null}
+                  </div>
+                </button>
+                <button
+                  className="btn btn-quiet p-2"
+                  onClick={() => void moveItem(item.id, -1).then(() => scheduleSync())}
+                  aria-label="Move up"
+                >
+                  <IconArrowUp size={17} />
+                </button>
+                <button
+                  className="btn btn-quiet p-2"
+                  onClick={() => void moveItem(item.id, 1).then(() => scheduleSync())}
+                  aria-label="Move down"
+                >
+                  <IconArrowDown size={17} />
+                </button>
+              </div>
+            );
+          })}
         </div>
         <button className="btn w-full mt-3" onClick={() => setPicking(true)}>
           + Add exercise
@@ -171,18 +178,79 @@ export function ItemSheet(props: { item: TemplateItem | null; onClose: () => voi
       item ? (await exerciseMap()).get(item.exercise_id) : undefined,
     [item?.id],
   );
-  // The toggle is controlled, so it needs the live row rather than the
+  // Switches are controlled, so they need the live row rather than the
   // snapshot the sheet was opened with.
   const live = useLiveQuery(() => (item ? db.template_item.get(item.id) : undefined), [item?.id]);
   if (!item) return null;
 
   const patch = (p: Parameters<typeof updateItem>[1]) =>
     void updateItem(item.id, p).then(() => scheduleSync());
+  const patchExercise = (p: Parameters<typeof updateExercise>[1]) => {
+    if (exercise) void updateExercise(exercise.id, p).then(() => scheduleSync());
+  };
   const enabledVariants = parseVariants(live?.variants ?? item.variants);
+  const implement: Implement = exercise?.implement ?? "bodyweight";
 
   return (
     <Sheet open={!!item} onClose={props.onClose} title={exercise?.name ?? "Exercise"}>
       <div className="space-y-3.5">
+        <div>
+          <div className="eyebrow mb-1.5">Loaded with</div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {IMPLEMENT_ORDER.map((imp) => {
+              const on = imp === implement;
+              return (
+                <button
+                  key={imp}
+                  className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-[11px] font-medium ${
+                    on ? "border-copper bg-copper/15 text-ink" : "border-line bg-raised text-dim"
+                  }`}
+                  aria-pressed={on}
+                  onClick={() => patchExercise({ implement: imp })}
+                >
+                  <ImplementIcon implement={imp} size={20} />
+                  {IMPLEMENTS[imp].label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-[12.5px] text-faint mt-1.5">
+            Load is entered as: {IMPLEMENTS[implement].hint}.
+          </div>
+        </div>
+        {implement === "barbell" ? (
+          <div className="flex items-center gap-2">
+            <span className="eyebrow">Bar</span>
+            {BAR_OPTIONS.map((b) => (
+              <button
+                key={b}
+                className={`chip ${(exercise?.bar_lb ?? 45) === b ? "chip-active" : ""}`}
+                onClick={() => patchExercise({ bar_lb: b })}
+              >
+                {b} lb
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {implement === "bodyweight" ? (
+          <ToggleRow
+            label="Added weight (belt / vest)"
+            checked={(live?.track_weight ?? item.track_weight) === 1}
+            onChange={(v) => patch({ track_weight: v ? 1 : 0 })}
+          />
+        ) : null}
+        <ToggleRow
+          label={
+            enabledVariants.length > 0 && enabledVariants.join(", ") !== BAR_VARIANTS.join(", ")
+              ? `Variant toggle (${enabledVariants.join(" / ")})`
+              : "Bar toggle (Angled / Straight)"
+          }
+          checked={enabledVariants.length > 0}
+          onChange={(v) => patch({ variants: v ? BAR_VARIANTS.join(", ") : "" })}
+        />
+        <div className="text-[12.5px] text-faint -mt-2">
+          Adds variant chips to the card; the one you pick is saved with each set.
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <div className="eyebrow mb-1">Sets</div>
@@ -207,39 +275,6 @@ export function ItemSheet(props: { item: TemplateItem | null; onClose: () => voi
             />
           </label>
         </div>
-        <label className="block">
-          <div className="eyebrow mb-1">Progression</div>
-          <input
-            className="input"
-            defaultValue={item.progression}
-            placeholder="e.g. 4 steps declined ring"
-            onBlur={(e) => patch({ progression: e.target.value.trim() })}
-          />
-        </label>
-        <ToggleRow
-          label="Added weight (weighted bodyweight)"
-          checked={(live?.track_weight ?? item.track_weight) === 1}
-          onChange={(v) => patch({ track_weight: v ? 1 : 0 })}
-        />
-        <ToggleRow
-          label="Bar toggle (Angled / Straight)"
-          checked={enabledVariants.length > 0}
-          onChange={(v) => patch({ variants: v ? BAR_VARIANTS.join(", ") : "" })}
-        />
-        <div className="text-[12.5px] text-faint -mt-2">
-          Adds Angled / Straight chips to the card; the one you pick is saved with each set.
-        </div>
-        <label className="block">
-          <div className="eyebrow mb-1">Form video URL</div>
-          <input
-            className="input"
-            defaultValue={exercise?.video_url ?? ""}
-            placeholder="https://youtube.com/…"
-            onBlur={(e) => {
-              if (exercise) void updateExercise(exercise.id, { video_url: e.target.value.trim() }).then(() => scheduleSync());
-            }}
-          />
-        </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <div className="eyebrow mb-1">Counted in</div>
@@ -266,6 +301,15 @@ export function ItemSheet(props: { item: TemplateItem | null; onClose: () => voi
             />
           </label>
         </div>
+        <label className="block">
+          <div className="eyebrow mb-1">Form video URL</div>
+          <input
+            className="input"
+            defaultValue={exercise?.video_url ?? ""}
+            placeholder="https://youtube.com/…"
+            onBlur={(e) => patchExercise({ video_url: e.target.value.trim() })}
+          />
+        </label>
         {props.showRemove !== false ? (
           <button
             className="btn btn-danger w-full"
@@ -317,9 +361,10 @@ function ExercisePicker(props: { open: boolean; templateId: string; onClose: () 
         {exercises.map((e) => (
           <button
             key={e.id}
-            className="card w-full px-3.5 py-2.5 text-left text-[15px]"
+            className="card w-full px-3.5 py-2.5 text-left text-[15px] flex items-center gap-2"
             onClick={() => void pick(e.id)}
           >
+            <ImplementIcon implement={e.implement ?? "bodyweight"} size={16} className="text-dim" />
             {e.name}
           </button>
         ))}

@@ -4,14 +4,17 @@ import { db } from "../db/db";
 import { exerciseStats } from "../db/stats";
 import { liveTemplates, templateItems, exerciseMap } from "../db/repo";
 import { fmtDate } from "../lib/dates";
+import { IMPLEMENTS, fmtLoad } from "../lib/load";
 import { fmtValue } from "../lib/targets";
 import { Chart, type ChartPoint } from "./Chart";
+import { ImplementIcon } from "./ImplementIcon";
 
-const COLORS = { best: "#d07248", total: "#5294d6" };
+type Metric = "best" | "total" | "load";
+const COLORS: Record<Metric, string> = { best: "#d07248", total: "#5294d6", load: "#e3a93c" };
 
 export function ProgressView() {
   const [exerciseId, setExerciseId] = useState<string | null>(null);
-  const [metric, setMetric] = useState<"best" | "total">("best");
+  const [metric, setMetric] = useState<Metric>("best");
 
   // Default to the most recently trained exercise.
   useEffect(() => {
@@ -48,21 +51,29 @@ export function ProgressView() {
     [exerciseId],
   );
 
+  const fmt = (v: number) =>
+    metric === "load" ? fmtLoad(v, stats?.implement ?? "bodyweight") : fmtValue(v, stats?.repType ?? "reps");
+
   const points: ChartPoint[] =
     stats?.points.map((p) => ({
       date: p.date,
-      value: metric === "best" ? p.best : p.total,
-      progression: p.progression,
-      changed: p.progressionChanged,
+      value: metric === "best" ? p.best : metric === "total" ? p.total : p.load,
+      label: p.label,
+      changed: p.labelChanged,
       isPR:
-        metric === "best" &&
-        !!stats.bestEver &&
-        p.best === stats.bestEver.value &&
-        p.date === stats.bestEver.date,
+        (metric === "best" &&
+          !!stats.bestEver &&
+          p.best === stats.bestEver.value &&
+          p.date === stats.bestEver.date) ||
+        (metric === "load" &&
+          !!stats.bestLoad &&
+          stats.bestLoad.value > 0 &&
+          p.load === stats.bestLoad.value &&
+          p.date === stats.bestLoad.date),
     })) ?? [];
 
-  const progressionChanges =
-    stats?.points.filter((p, i) => i === 0 || p.progressionChanged) ?? [];
+  const loadChanges = stats?.points.filter((p, i) => i === 0 || p.labelChanged) ?? [];
+  const latest = stats?.points[stats.points.length - 1];
 
   return (
     <div className="px-4 pt-5">
@@ -90,18 +101,17 @@ export function ProgressView() {
       </select>
 
       <div className="flex gap-2 mb-4">
-        <button
-          className={`chip ${metric === "best" ? "chip-active" : ""}`}
-          onClick={() => setMetric("best")}
-        >
-          Best set
-        </button>
-        <button
-          className={`chip ${metric === "total" ? "chip-active" : ""}`}
-          onClick={() => setMetric("total")}
-        >
-          Session total
-        </button>
+        {(
+          [
+            ["best", "Best set"],
+            ["total", "Session total"],
+            ["load", "Load"],
+          ] as [Metric, string][]
+        ).map(([m, label]) => (
+          <button key={m} className={`chip ${metric === m ? "chip-active" : ""}`} onClick={() => setMetric(m)}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {stats ? (
@@ -114,22 +124,22 @@ export function ProgressView() {
             />
             <StatTile label="Sessions" value={String(stats.sessionsCount)} sub="logged" />
             <StatTile
-              label="Progression"
-              value=""
-              sub={stats.points[stats.points.length - 1]?.progression || "not set"}
-              small
+              label="Load"
+              value={latest ? fmtLoad(latest.load, stats.implement) : "—"}
+              sub={IMPLEMENTS[stats.implement].label}
+              icon={<ImplementIcon implement={stats.implement} size={14} className="text-dim" />}
             />
           </div>
           <div className="card p-4">
-            <Chart points={points} color={COLORS[metric]} repType={stats.repType} />
+            <Chart points={points} color={COLORS[metric]} fmt={fmt} />
           </div>
-          {progressionChanges.length > 0 ? (
+          {loadChanges.length > 0 ? (
             <div className="card p-4 mt-3">
-              <div className="eyebrow mb-2">Progression timeline</div>
+              <div className="eyebrow mb-2">Load timeline</div>
               <div className="space-y-1.5">
-                {progressionChanges.map((p, i) => (
+                {loadChanges.map((p, i) => (
                   <div key={i} className="flex justify-between gap-3 text-[14px]">
-                    <span className="truncate">{p.progression || "—"}</span>
+                    <span className="truncate">{p.label || "—"}</span>
                     <span className="text-dim shrink-0">{fmtDate(p.date)}</span>
                   </div>
                 ))}
@@ -144,16 +154,15 @@ export function ProgressView() {
   );
 }
 
-function StatTile(props: { label: string; value: string; sub: string; small?: boolean }) {
+function StatTile(props: { label: string; value: string; sub: string; icon?: React.ReactNode }) {
   return (
     <div className="card px-3 py-2.5 min-w-0">
-      <div className="eyebrow">{props.label}</div>
-      {props.value ? (
-        <div className="display text-[26px] font-bold leading-tight">{props.value}</div>
-      ) : null}
-      <div className={`text-dim truncate ${props.small ? "text-[13px] mt-1" : "text-[12px]"}`}>
-        {props.sub}
+      <div className="eyebrow flex items-center gap-1.5">
+        {props.icon}
+        {props.label}
       </div>
+      <div className="display text-[26px] font-bold leading-tight truncate">{props.value}</div>
+      <div className="text-dim truncate text-[12px]">{props.sub}</div>
     </div>
   );
 }

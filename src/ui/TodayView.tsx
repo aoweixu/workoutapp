@@ -24,7 +24,7 @@ import { startRest, useRest } from "../state/timer";
 import { ExerciseCard } from "./ExerciseCard";
 import { EditSheet } from "./EditSheet";
 import { ItemSheet } from "./PlanView";
-import { WeightSheet } from "./WeightSheet";
+import { LoadSheet } from "./LoadSheet";
 
 interface Row {
   item: TemplateItem;
@@ -41,9 +41,9 @@ interface Block {
 
 export function TodayView(props: { settings: Settings }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editingLog, setEditingLog] = useState<{ log: SetLog; item: TemplateItem; name: string } | null>(null);
-  const [editingProg, setEditingProg] = useState<TemplateItem | null>(null);
-  const [pickingWeight, setPickingWeight] = useState<{ exerciseId: string; name: string; value: number } | null>(null);
+  const [editingLog, setEditingLog] = useState<{ log: SetLog; item: TemplateItem; exercise: Exercise } | null>(null);
+  const [editingItem, setEditingItem] = useState<TemplateItem | null>(null);
+  const [pickingLoad, setPickingLoad] = useState<{ exercise: Exercise; value: number } | null>(null);
   const rest = useRest();
   const selections = useSelections();
   const today = localDateStr();
@@ -101,7 +101,7 @@ export function TodayView(props: { settings: Settings }) {
       setNo,
       value,
       repType: row.item.rep_type,
-      progression: row.item.progression,
+      progression: "",
       weight: combo.weight,
       variant: combo.variant,
     });
@@ -128,12 +128,10 @@ export function TodayView(props: { settings: Settings }) {
           selection={selections.get(row.exercise.id)}
           rest={rest}
           onLog={(setNo, value, combo) => void handleLog(block, row, setNo, value, combo)}
-          onOpenLog={(log) => setEditingLog({ log, item: row.item, name: row.exercise.name })}
-          onEditProgression={() => setEditingProg(row.item)}
+          onOpenLog={(log) => setEditingLog({ log, item: row.item, exercise: row.exercise })}
+          onOpenSettings={() => setEditingItem(row.item)}
           onSelect={(patch) => setSelection(row.exercise.id, patch)}
-          onPickWeight={(current) =>
-            setPickingWeight({ exerciseId: row.exercise.id, name: row.exercise.name, value: current })
-          }
+          onPickLoad={(current) => setPickingLoad({ exercise: row.exercise, value: current })}
         />
       ))}
     </div>
@@ -183,21 +181,22 @@ export function TodayView(props: { settings: Settings }) {
 
       <EditSheet
         log={editingLog?.log ?? null}
-        exerciseName={editingLog?.name ?? ""}
+        exerciseName={editingLog?.exercise.name ?? ""}
+        implement={editingLog?.exercise.implement}
         trackWeight={editingLog ? editingLog.item.track_weight === 1 : undefined}
         variants={editingLog ? parseVariants(editingLog.item.variants) : undefined}
         onClose={() => setEditingLog(null)}
       />
-      <WeightSheet
-        open={!!pickingWeight}
-        title={`${pickingWeight?.name ?? ""} · added weight`}
-        value={pickingWeight?.value ?? 0}
+      <LoadSheet
+        open={!!pickingLoad}
+        exercise={pickingLoad?.exercise ?? null}
+        value={pickingLoad?.value ?? 0}
         onSave={(lb) => {
-          if (pickingWeight) setSelection(pickingWeight.exerciseId, { weight: lb });
+          if (pickingLoad) setSelection(pickingLoad.exercise.id, { weight: lb });
         }}
-        onClose={() => setPickingWeight(null)}
+        onClose={() => setPickingLoad(null)}
       />
-      <ItemSheet item={editingProg} onClose={() => setEditingProg(null)} showRemove={false} />
+      <ItemSheet item={editingItem} onClose={() => setEditingItem(null)} showRemove={false} />
     </div>
   );
 }

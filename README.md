@@ -9,7 +9,7 @@ Personal workout log. Offline-first PWA: sets are logged to IndexedDB on the pho
 - Tap a plate to log that set. Tap a logged plate to adjust or delete it. "+" logs an extra set.
 - Logging a set starts the rest timer (default 120s, per-exercise override in Plan). The gold ring drains around the plate you just racked.
 - Isometric holds count seconds instead of reps and have a stopwatch in the edit sheet.
-- Weighted bodyweight work: turn on "Added weight" for an exercise in Plan and the card gets a weight chip (lb, 2.5 steps); the weight is saved on every set and carried forward. Turning on both bar options (Angled, Straight) adds a bar toggle to the card the same way. Last, Best, and prefills only compare sets done at the same weight and variant.
+- Every exercise declares how it is loaded (bodyweight, dumbbell, barbell, fixed bar, cable, machine, plate; set in the exercise settings sheet). The gold chip on the card shows the current load with the implement icon; tapping it opens a picker shaped for that implement, including a plate selector for barbells (bar + plates per side, stored as total lb). Dumbbell loads are per hand. The load is saved on every set and carried forward like reps; Last, Best, and prefills only compare sets at the same load and variant. Pull-ups can toggle Angled / Straight bar, Dips Ring / Bar.
 - Each card shows your best reps per set slot under the last session; a plate turns gold when a logged set beats that slot's best.
 - Screen stays awake during the workout (toggle in Settings).
 

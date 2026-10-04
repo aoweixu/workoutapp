@@ -1,18 +1,16 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { fmtShort } from "../lib/dates";
-import { fmtValue } from "../lib/targets";
-
 export interface ChartPoint {
   date: string;
   value: number;
-  progression: string;
+  label: string;
   changed: boolean;
   isPR: boolean;
 }
 
 // Single-series session line. X is session order (equal spacing), sparse date
-// labels; dashed verticals mark progression changes; gold ring marks the PR.
-export function Chart(props: { points: ChartPoint[]; color: string; repType: "reps" | "seconds" }) {
+// labels; dashed verticals mark load/variant changes; gold ring marks the PR.
+export function Chart(props: { points: ChartPoint[]; color: string; fmt: (v: number) => string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(340);
   const [active, setActive] = useState<number | null>(null);
@@ -61,9 +59,9 @@ export function Chart(props: { points: ChartPoint[]; color: string; repType: "re
             left: Math.min(Math.max(x(active) - 60, 0), Math.max(width - 150, 0)),
           }}
         >
-          <span className="font-semibold">{fmtValue(act.value, props.repType)}</span>
+          <span className="font-semibold">{props.fmt(act.value)}</span>
           <span className="text-dim"> · {fmtShort(act.date)}</span>
-          {act.progression ? <span className="text-dim"> · {act.progression}</span> : null}
+          {act.label ? <span className="text-dim"> · {act.label}</span> : null}
         </div>
       ) : null}
       <svg
@@ -144,7 +142,7 @@ export function Chart(props: { points: ChartPoint[]; color: string; repType: "re
           fontWeight="600"
           fill="var(--color-ink)"
         >
-          {fmtValue(points[points.length - 1].value, props.repType)}
+          {props.fmt(points[points.length - 1].value)}
         </text>
         {labelIdxs.map((i) => (
           <text

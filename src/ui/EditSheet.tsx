@@ -2,22 +2,26 @@ import { useEffect, useRef, useState } from "react";
 import type { SetLog } from "../db/db";
 import { removeSetLog, updateSetLog } from "../db/repo";
 import { scheduleSync } from "../sync/engine";
-import { fmtValue, fmtWeight } from "../lib/targets";
+import { IMPLEMENTS, fmtLoad, type Implement } from "../lib/load";
+import { fmtValue } from "../lib/targets";
 import { closeTopOverlay } from "../state/ui";
 import { Sheet } from "./Sheet";
+import { ImplementIcon } from "./ImplementIcon";
 import { IconTrash } from "./Icons";
 
 // Adjust or delete a logged set. For timed holds there's a stopwatch: run it
-// while you hold, stop it, the elapsed seconds become the value. Weight and
-// variant rows appear when the exercise tracks them (or the set carries one).
+// while you hold, stop it, the elapsed seconds become the value. Load and
+// variant rows appear when the exercise carries them.
 export function EditSheet(props: {
   log: SetLog | null;
   exerciseName: string;
+  implement?: Implement;
   trackWeight?: boolean;
   variants?: string[];
   onClose: () => void;
 }) {
   const { log } = props;
+  const implement = props.implement ?? "bodyweight";
   const [value, setValue] = useState(0);
   const [weight, setWeight] = useState(0);
   const [variant, setVariant] = useState("");
@@ -43,8 +47,9 @@ export function EditSheet(props: {
 
   if (!log) return null;
 
-  const showWeight = props.trackWeight ?? log.weight > 0;
+  const showWeight = implement !== "bodyweight" || (props.trackWeight ?? log.weight > 0);
   const variantList = props.variants ?? (log.variant ? [log.variant] : []);
+  const wStep = IMPLEMENTS[implement].step;
 
   const step = (d: number) => setValue((v) => Math.max(0, v + d));
 
@@ -88,19 +93,22 @@ export function EditSheet(props: {
       </div>
       {showWeight ? (
         <div className="flex items-center justify-between gap-3 mb-3">
-          <span className="text-[15px] text-dim">Added weight</span>
+          <span className="flex items-center gap-1.5 text-[15px] text-dim">
+            <ImplementIcon implement={implement} size={16} />
+            Load
+          </span>
           <div className="flex items-center gap-2">
             <button
               className="btn px-3 py-1.5"
-              onClick={() => setWeight((w) => Math.max(0, w - 2.5))}
-              aria-label="Minus 2.5 lb"
+              onClick={() => setWeight((w) => Math.max(0, w - wStep))}
+              aria-label={`Minus ${wStep} lb`}
             >
               −
             </button>
-            <span className="display text-[20px] font-bold text-gold min-w-[80px] text-center tabular-nums">
-              {fmtWeight(weight)}
+            <span className="display text-[20px] font-bold text-gold min-w-[88px] text-center tabular-nums">
+              {fmtLoad(weight, implement)}
             </span>
-            <button className="btn px-3 py-1.5" onClick={() => setWeight((w) => w + 2.5)} aria-label="Plus 2.5 lb">
+            <button className="btn px-3 py-1.5" onClick={() => setWeight((w) => w + wStep)} aria-label={`Plus ${wStep} lb`}>
               +
             </button>
           </div>

@@ -1,6 +1,7 @@
 import type { Exercise, SetLog, TemplateItem } from "../db/db";
 import { restFraction, type RestState } from "../state/timer";
-import { fmtValue, fmtWeight, parseTargets } from "../lib/targets";
+import { fmtValue, parseTargets } from "../lib/targets";
+import { fmtLoad, fmtPerSide } from "../lib/load";
 import {
   bestPerSlot,
   lastSession,
@@ -11,7 +12,8 @@ import {
 } from "../lib/history";
 import { fmtShort } from "../lib/dates";
 import { PlateButton } from "./PlateButton";
-import { IconPlay } from "./Icons";
+import { ImplementIcon } from "./ImplementIcon";
+import { IconGear, IconPlay } from "./Icons";
 
 export function ExerciseCard(props: {
   item: TemplateItem;
@@ -22,12 +24,14 @@ export function ExerciseCard(props: {
   rest: RestState | null;
   onLog: (setNo: number, value: number, combo: Combo) => void;
   onOpenLog: (log: SetLog) => void;
-  onEditProgression: () => void;
+  onOpenSettings: () => void;
   onSelect: (patch: Partial<Combo>) => void;
-  onPickWeight: (current: number) => void;
+  onPickLoad: (current: number) => void;
 }) {
   const { item, exercise, logs, history, selection } = props;
-  const weighted = item.track_weight === 1;
+  const implement = exercise.implement ?? "bodyweight";
+  // Loaded implements always carry a weight; bodyweight only when opted in.
+  const weighted = implement !== "bodyweight" || item.track_weight === 1;
   const variants = parseVariants(item.variants);
   const unit = item.rep_type === "seconds" ? "s" : "";
 
@@ -38,7 +42,7 @@ export function ExerciseCard(props: {
   const lastAny = lastSession(history);
 
   // Combo for the sets about to be logged: explicit pick, else today's last
-  // set, else last session, else bodyweight / first variant.
+  // set, else last session, else zero / first variant.
   const pickVariant = (): string => {
     if (variants.length === 0) return "";
     for (const c of [selection?.variant, todayLast?.variant, lastAny?.variant]) {
@@ -127,7 +131,7 @@ export function ExerciseCard(props: {
   }
 
   const comboTag = (c: Combo) =>
-    [weighted ? fmtWeight(c.weight) : "", c.variant].filter(Boolean).join(" · ") || "no variant";
+    [weighted ? fmtLoad(c.weight, implement) : "", c.variant].filter(Boolean).join(" · ") || "no variant";
   const lastLine = shownLast
     ? `Last ${[...shownLast.values.entries()]
         .sort((a, b) => a[0] - b[0])
@@ -170,10 +174,14 @@ export function ExerciseCard(props: {
           {weighted ? (
             <button
               className="chip text-gold font-semibold"
-              onClick={() => props.onPickWeight(combo.weight)}
-              aria-label="Change added weight"
+              onClick={() => props.onPickLoad(combo.weight)}
+              aria-label="Change load"
             >
-              {fmtWeight(combo.weight)}
+              <ImplementIcon implement={implement} size={15} />
+              {fmtLoad(combo.weight, implement)}
+              {implement === "barbell" && combo.weight > 0 ? (
+                <span className="text-faint font-medium">{fmtPerSide(combo.weight, exercise.bar_lb)}</span>
+              ) : null}
             </button>
           ) : null}
           {variants.map((v) => (
@@ -189,14 +197,9 @@ export function ExerciseCard(props: {
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2.5 mt-3">{slots}</div>
-      <button
-        className="chip mt-3 max-w-full"
-        onClick={props.onEditProgression}
-        aria-label="Edit progression"
-      >
-        <span className="truncate">
-          {item.progression || "progression · weight · bar"}
-        </span>
+      <button className="chip mt-3" onClick={props.onOpenSettings} aria-label="Exercise settings">
+        <IconGear size={13} />
+        settings
       </button>
     </div>
   );

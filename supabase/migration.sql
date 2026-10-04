@@ -17,6 +17,8 @@ create table public.exercise (
   name text not null,
   video_url text not null default '',
   notes text not null default '',
+  implement text not null default 'bodyweight',
+  bar_lb real not null default 45,
   updated_at timestamptz not null default now(),
   deleted smallint not null default 0
 );

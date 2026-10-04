@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
+import type { Implement } from "../lib/load";
 
 // All synced rows carry: client-generated uuid, ISO updated_at for LWW,
 // soft-delete flag, and a local-only dirty flag (1 = not yet pushed).
@@ -13,6 +14,10 @@ export interface Exercise extends Synced {
   name: string;
   video_url: string;
   notes: string;
+  // How load is applied; sets what the per-set weight number means.
+  implement: Implement;
+  // Bar weight for the plate selector (barbell only).
+  bar_lb: number;
 }
 
 export interface Template extends Synced {
@@ -82,7 +87,7 @@ const STORES = {
 };
 
 db.version(1).stores(STORES);
-// v2: weight/variant columns. Backfill defaults without dirtying rows; the
+// v2: weight/variant columns. v3: exercise implement + bar weight. Backfill defaults without dirtying rows; the
 // server columns default identically so nothing needs pushing.
 db.version(2)
   .stores(STORES)
@@ -100,6 +105,17 @@ db.version(2)
       .modify((l: Partial<SetLog>) => {
         l.weight ??= 0;
         l.variant ??= "";
+      });
+  });
+db.version(3)
+  .stores(STORES)
+  .upgrade(async (tx) => {
+    await tx
+      .table("exercise")
+      .toCollection()
+      .modify((e: Partial<Exercise>) => {
+        e.implement ??= "bodyweight";
+        e.bar_lb ??= 45;
       });
   });
 

@@ -13,6 +13,7 @@ import {
 } from "./db";
 import { isoWeekday, localDateStr } from "../lib/dates";
 import type { HistoryEntry } from "../lib/history";
+import { DEFAULT_BAR_LB } from "../lib/load";
 
 // ---------- settings ----------
 
@@ -262,14 +263,20 @@ export async function exerciseMap(): Promise<Map<string, Exercise>> {
 }
 
 export async function createExercise(name: string): Promise<Exercise> {
-  const row = fresh({ name: name.trim(), video_url: "", notes: "" });
+  const row = fresh({
+    name: name.trim(),
+    video_url: "",
+    notes: "",
+    implement: "bodyweight" as const,
+    bar_lb: DEFAULT_BAR_LB,
+  });
   await db.exercise.add(row);
   return row;
 }
 
 export async function updateExercise(
   id: string,
-  patch: Partial<Pick<Exercise, "name" | "video_url" | "notes">>,
+  patch: Partial<Pick<Exercise, "name" | "video_url" | "notes" | "implement" | "bar_lb">>,
 ): Promise<void> {
   const row = await db.exercise.get(id);
   if (!row) return;
